@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Snellen Visual Acuity Chart | Tools</title>
+    <style>
+        :root {
+            --scale: 1;
+            --base-font: 200px;
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --primary-color: #2563eb;
+            --accent-color: #f1f5f9;
+            --border-color: #e2e8f0;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #ffffff;
+            --primary-color: #3b82f6;
+            --accent-color: #1e293b;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-nav {
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+
+        .nav-back:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1, h2 { text-align: center; font-weight: 600; }
+        p { line-height: 1.6; }
+
+        .card {
+            background-color: var(--accent-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-weight: 500; font-size: 0.95rem; }
+
+        input[type="number"], input[type="range"] {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn.secondary { background-color: #64748b; }
+        .btn.danger { background-color: #ef4444; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+
+        /* Calibration Target */
+        .calibration-target-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0;
+            min-height: 300px;
+            overflow: hidden;
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-color);
+            position: relative;
+        }
+
+        .calibration-target {
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: 700;
+            line-height: 1;
+            font-size: calc(var(--base-font) * var(--scale));
+            user-select: none;
+            color: var(--text-color);
+        }
+
+        .target-ruler {
+            position: absolute;
+            left: 50%;
+            top: 10px;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        /* Chart */
+        .chart-toolbar {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color);
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            padding-bottom: 100px;
+        }
+
+        .chart-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            padding: 10px 0;
+            border-radius: 8px;
+        }
+        
+        .chart-row:hover {
+            background-color: var(--accent-color);
+        }
+
+        .chart-letters {
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.6em;
+            margin-right: -0.6em; /* offsets the last letter's spacing */
+            text-align: center;
+        }
+
+        .acuity-label {
+            position: absolute;
+            left: 0;
+            font-size: 1rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .acuity-label-right {
+            position: absolute;
+            right: 0;
+            font-size: 1rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .reference-lines {
+            width: 100%;
+            height: 2px;
+            background: #ef4444; /* Red line above 20/20 */
+            margin: -10px 0;
+            opacity: 0.8;
+            display: none; /* toggled via JS */
+        }
+        .reference-lines.green {
+            background: #22c55e; /* Green line below 20/20 */
+        }
+        
+        @media (max-width: 768px) {
+            .acuity-label, .acuity-label-right {
+                position: static;
+                margin: 0 15px;
+                font-size: 0.8rem;
+            }
+            .chart-letters {
+                letter-spacing: 0.3em;
+                margin-right: -0.3em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <a href="./index.html" class="nav-back">← Back to Tools</a>
+        <span style="font-size: 0.85rem; color: #64748b;">Visual Acuity Tool</span>
+    </header>
+
+    <!-- ================= CALIBRATION SCREEN ================= -->
+    <div id="calibration-screen" class="screen active">
+        <h1>Snellen Chart Calibration</h1>
+        <div class="card">
+            <h2>Step 1: Setup Your Distance</h2>
+            <p>To accurately test your visual acuity, the chart must be scaled to your exact screen size and viewing distance. If you are checking for clarity changes between glasses, sitting at a consistent distance is crucial.</p>
+            
+            <div class="controls-grid">
+                <div class="input-group">
+                    <label for="distance-input">Viewing Distance (Meters)</label>
+                    <input type="number" id="distance-input" value="3" min="0.5" max="6" step="0.5">
+                    <small style="color: #64748b;">Standard options: 3m (10ft) or 1.5m (5ft)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Step 2: Physical Calibration</h2>
+            <p>Grab a physical ruler or measuring tape. Use the slider below to adjust the size of the letter 'E' until its height is exactly <strong id="target-mm-display" style="color: var(--primary-color); font-size: 1.2rem;">43.6 mm</strong> on your screen.</p>
+            
+            <div class="input-group" style="margin-top: 20px;">
+                <label for="scale-slider">Adjust Zoom Level</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn secondary" onclick="adjustScale(-0.01)" style="padding: 5px 15px;">-</button>
+                    <input type="range" id="scale-slider" min="0.1" max="5" step="0.005" value="1">
+                    <button class="btn secondary" onclick="adjustScale(0.01)" style="padding: 5px 15px;">+</button>
+                </div>
+            </div>
+
+            <div class="calibration-target-container">
+                <div class="target-ruler">Target Height: <span id="target-ruler-val">43.6</span> mm</div>
+                <div class="calibration-target">E</div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="startTest()" style="font-size: 1.2rem; padding: 15px 40px;">
+                    Calibration Complete - Start Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= TEST SCREEN ================= -->
+    <div id="test-screen" class="screen">
+        <div class="chart-toolbar">
+            <div class="btn-group">
+                <button class="btn secondary" onclick="backToCalibration()">← Calibration</button>
+                <button class="btn" onclick="randomizeChart()">🔀 Randomize Letters</button>
+                <button class="btn secondary" onclick="toggleIsolateMode()" id="isolate-btn">🎯 Enable Line Isolation</button>
+                <button class="btn secondary" onclick="toggleContrast()">🌓 Invert Colors</button>
+            </div>
+            <p style="text-align: center; margin: 5px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                <span id="isolate-hint" style="display: none;">Click any line to isolate it. Click again to clear.</span>
+                Comparing glasses? Test your old glasses first, cover one eye, and read down to the lowest clear line. Repeat with new glasses.
+            </p>
+        </div>
+
+        <div class="chart-container" id="chart-container">
+            <!-- Rows generated by JS -->
+        </div>
+    </div>
+
+
+    <script>
+        // Standard Snellen Rows (20/200 to 20/20)
+        const snellenRows = [
+            { acuity20: 200, acuity6: 60, letters: 1, is2020: false },
+            { acuity20: 100, acuity6: 30, letters: 2, is2020: false },
+            { acuity20: 70,  acuity6: 21, letters: 3, is2020: false },
+            { acuity20: 50,  acuity6: 15, letters: 4, is2020: false },
+            { acuity20: 40,  acuity6: 12, letters: 5, is2020: false },
+            { acuity20: 30,  acuity6: 9,  letters: 6, is2020: false },
+            { acuity20: 25,  acuity6: 7.5,letters: 7, is2020: false },
+            { acuity20: 20,  acuity6: 6,  letters: 8, is2020: true }
+        ];
+
+        // Sloan Letters optimal for visual acuity testing
+        const optotypes = ['C', 'D', 'E', 'F', 'L', 'N', 'O', 'P', 'T', 'Z'];
+
+        let isolateMode = false;
+        let currentlyIsolated = null;
+
+        // Base calibration values
+        const SNELLEN_ANGLE_RADIANS = 0.014544; // Equivalent to tan(50 arcminutes) for the 20/200 letter
+        
+        const distanceInput = document.getElementById('distance-input');
+        const scaleSlider = document.getElementById('scale-slider');
+        const targetMmDisplay = document.getElementById('target-mm-display');
+        const targetRulerVal = document.getElementById('target-ruler-val');
+        
+        function updateCalibrationTarget() {
+            const distMeters = parseFloat(distanceInput.value) || 3;
+            // Physical height of 20/200 letter = Distance(mm) * tan(50 arcmin)
+            const heightMm = (distMeters * 1000) * SNELLEN_ANGLE_RADIANS;
+            const heightStr = heightMm.toFixed(1);
+            targetMmDisplay.innerText = heightStr + " mm";
+            targetRulerVal.innerText = heightStr;
+        }
+
+        function adjustScale(delta) {
+            scaleSlider.value = parseFloat(scaleSlider.value) + delta;
+            updateScale();
+        }
+
+        function updateScale() {
+            document.documentElement.style.setProperty('--scale', scaleSlider.value);
+        }
+
+        function generateRandomLetters(count) {
+            let result = '';
+            for (let i = 0; i < count; i++) {
+                result += optotypes[Math.floor(Math.random() * optotypes.length)];
+            }
+            return result;
+        }
+
+        function buildChart() {
+            const container = document.getElementById('chart-container');
+            container.innerHTML = '';
+
+            snellenRows.forEach((row, index) => {
+                // Calculate size multiplier relative to the 20/200 letter
+                const sizeMultiplier = row.acuity20 / 200;
+                
+                // Add Red Line before 20/20
+                if (row.is2020) {
+                    const redLine = document.createElement('div');
+                    redLine.className = 'reference-lines red';
+                    redLine.style.display = 'block';
+                    container.appendChild(redLine);
+                }
+
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'chart-row';
+                rowDiv.dataset.index = index;
+                
+                // Randomize letters except top E
+                const letters = (index === 0) ? 'E' : generateRandomLetters(row.letters);
+
+                rowDiv.innerHTML = `
+                    <div class="acuity-label">20/${row.acuity20}</div>
+                    <div class="chart-letters" style="font-size: calc(${sizeMultiplier} * var(--base-font) * var(--scale));">
+                        ${letters}
+                    </div>
+                    <div class="acuity-label-right">6/${row.acuity6}</div>
+                `;
+
+                // Add Green line after 20/20
+                if (row.is2020) {
+                    const greenLine = document.createElement('div');
+                    greenLine.className = 'reference-lines green';
+                    greenLine.style.display = 'block';
+                    rowDiv.appendChild(greenLine); // Attached structurally differently but rendered fine via flex logic adjustments
+                }
+
+                rowDiv.addEventListener('click', () => handleRowClick(index));
+                container.appendChild(rowDiv);
+            });
+        }
+
+        function randomizeChart() {
+            buildChart();
+            if (isolateMode && currentlyIsolated !== null) {
+                applyIsolation(currentlyIsolated);
+            }
+        }
+
+        function toggleIsolateMode() {
+            isolateMode = !isolateMode;
+            const btn = document.getElementById('isolate-btn');
+            const hint = document.getElementById('isolate-hint');
+            
+            if (isolateMode) {
+                btn.classList.remove('secondary');
+                btn.innerText = '🎯 Exit Line Isolation';
+                hint.style.display = 'inline';
+            } else {
+                btn.classList.add('secondary');
+                btn.innerText = '🎯 Enable Line Isolation';
+                hint.style.display = 'none';
+                clearIsolation();
+            }
+        }
+
+        function handleRowClick(index) {
+            if (!isolateMode) return;
+            
+            if (currentlyIsolated === index) {
+                clearIsolation();
+                currentlyIsolated = null;
+            } else {
+                applyIsolation(index);
+                currentlyIsolated = index;
+            }
+        }
+
+        function applyIsolation(index) {
+            const rows = document.querySelectorAll('.chart-row');
+            rows.forEach((row, i) => {
+                row.style.opacity = (i === index) ? '1' : '0.1';
+            });
+        }
+
+        function clearIsolation() {
+            const rows = document.querySelectorAll('.chart-row');
+            rows.forEach(row => {
+                row.style.opacity = '1';
+            });
+        }
+
+        function toggleContrast() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function startTest() {
+            document.getElementById('calibration-screen').classList.remove('active');
+            document.getElementById('test-screen').classList.add('active');
+            buildChart();
+            window.scrollTo(0, 0);
+        }
+
+        function backToCalibration() {
+            document.getElementById('test-screen').classList.remove('active');
+            document.getElementById('calibration-screen').classList.active && document.getElementById('calibration-screen').classList.remove('active');
+            document.getElementById('calibration-screen').classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // Event Listeners
+        distanceInput.addEventListener('input', updateCalibrationTarget);
+        scaleSlider.addEventListener('input', updateScale);
+
+        // Initialize
+        updateCalibrationTarget();
+        updateScale();
+
+    </script>
+</body>
+</html>
