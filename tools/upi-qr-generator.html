@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI QR Code & Payment Link Generator | Tools</title>
+    <meta name="description" content="Generate custom, generic UPI payment links and QR codes with filled parameters. Scan existing QR codes via camera or image to modify and re-generate.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- QRCode.js Library for generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- jsQR Library for QR Scanning & Decoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.75);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --input-border: rgba(255, 255, 255, 0.15);
+            --input-focus: #6366f1;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --success: #22c55e;
+            --success-glow: rgba(34, 197, 94, 0.2);
+            --badge-bg: rgba(99, 102, 241, 0.15);
+            --badge-text: #a5b4fc;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f8fafc;
+                --card-bg: rgba(255, 255, 255, 0.9);
+                --card-border: rgba(226, 232, 240, 0.8);
+                --input-bg: #ffffff;
+                --input-border: #cbd5e1;
+                --input-focus: #4f46e5;
+                --text-primary: #0f172a;
+                --text-secondary: #64748b;
+                --accent: #4f46e5;
+                --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                --accent-glow: rgba(79, 70, 229, 0.15);
+                --success: #16a34a;
+                --badge-bg: rgba(79, 70, 229, 0.1);
+                --badge-text: #4338ca;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            background-image: 
+                radial-gradient(circle at 15% 20%, var(--accent-glow) 0%, transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 45%);
+            background-attachment: fixed;
+        }
+
+        /* Top Nav */
+        .top-nav {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            background-color: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-back:hover {
+            color: var(--accent);
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .page-title {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .page-title h1 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 850px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--card-border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .scan-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-scan-trigger {
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: var(--accent-gradient);
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            box-shadow: 0 2px 8px var(--accent-glow);
+            transition: transform 0.2s;
+        }
+
+        .btn-scan-trigger:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .form-group label .param-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--badge-text);
+            background: var(--badge-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .form-group label .required-tag {
+            color: #ef4444;
+            font-size: 0.8rem;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .hint {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+        }
+
+        /* Quick Amount Chips */
+        .presets-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .chip {
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: var(--input-bg);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+            background: var(--badge-bg);
+        }
+
+        /* QR & Preview Side */
+        .preview-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .qr-wrapper {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            transition: transform 0.2s;
+            min-width: 220px;
+            min-height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .qr-wrapper canvas, .qr-wrapper img {
+            display: block;
+            max-width: 100%;
+        }
+
+        .qr-placeholder {
+            color: #64748b;
+            font-size: 0.9rem;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .url-box {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--badge-text);
+            word-break: break-all;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        /* Action Buttons */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 0.85rem 1.25rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-full {
+            grid-column: span 2;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #ffffff;
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            background: var(--badge-bg);
+            transform: translateY(-2px);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Camera Scanner Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .scanner-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .scanner-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .scanner-viewport {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-viewport video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scan-region-box {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #22c55e, transparent);
+            top: 0;
+            animation: scanAnim 2s infinite linear;
+        }
+
+        @keyframes scanAnim {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <a href="./index.html" class="nav-back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Tools
+        </a>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">UPI Payment Utility</span>
+    </nav>
+
+    <main>
+        <div class="page-title">
+            <h1>UPI QR Code & Link Generator</h1>
+            <p>Fill in parameters manually or scan an existing QR code to extract & edit details instantly.</p>
+        </div>
+
+        <div class="grid-container">
+            
+            <!-- Left Column: Form Controls -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Payment Parameters
+                    </h2>
+
+                    <div class="scan-actions">
+                        <button type="button" class="btn-scan-trigger" onclick="openCameraScanner()">
+                            📷 Camera
+                        </button>
+                        <button type="button" class="btn-scan-trigger" onclick="document.getElementById('qrFileInput').click()" style="background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-primary);">
+                            📁 Upload
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hidden file input for QR upload -->
+                <input type="file" id="qrFileInput" accept="image/*" style="display: none;" onchange="handleQRFileUpload(event)">
+
+                <form id="upiForm" onsubmit="event.preventDefault();">
+                    
+                    <!-- Payee Address (pa) -->
+                    <div class="form-group">
+                        <label for="pa">
+                            <span>Payee VPA / UPI ID <span class="required-tag">*</span></span>
+                            <span class="param-code">pa</span>
+                        </label>
+                        <input type="text" id="pa" placeholder="e.g., name@bank or 9876543210@upi" required oninput="generateUPI()">
+                        <div class="hint">Virtual Payment Address (Required)</div>
+                    </div>
+
+                    <!-- Payee Name (pn) -->
+                    <div class="form-group">
+                        <label for="pn">
+                            <span>Payee Name</span>
+                            <span class="param-code">pn</span>
+                        </label>
+                        <input type="text" id="pn" placeholder="e.g., John Doe or Store Name" oninput="generateUPI()">
+                        <div class="hint">Display name of the receiver</div>
+                    </div>
+
+                    <!-- Amount (am) & Currency (cu) -->
+                    <div class="form-group">
+                        <label for="am">
+                            <span>Amount (INR)</span>
+                            <span class="param-code">am</span>
+                        </label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="number" id="am" placeholder="e.g., 250.00" step="0.01" min="0" oninput="generateUPI()" style="flex: 1;">
+                            <select id="cu" onchange="generateUPI()" style="width: 90px;">
+                                <option value="INR" selected>INR</option>
+                            </select>
+                        </div>
+                        <div class="presets-grid">
+                            <button type="button" class="chip" onclick="setAmount(50)">₹50</button>
+                            <button type="button" class="chip" onclick="setAmount(100)">₹100</button>
+                            <button type="button" class="chip" onclick="setAmount(500)">₹500</button>
+                            <button type="button" class="chip" onclick="setAmount(1000)">₹1000</button>
+                            <button type="button" class="chip" onclick="setAmount('')">Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Note (tn) -->
+                    <div class="form-group">
+                        <label for="tn">
+                            <span>Transaction Note / Purpose</span>
+                            <span class="param-code">tn</span>
+                        </label>
+                        <input type="text" id="tn" placeholder="e.g., Dinner split / Invoice #102" oninput="generateUPI()">
+                    </div>
+
+                    <!-- Transaction Reference (tr) -->
+                    <div class="form-group">
+                        <label for="tr">
+                            <span>Transaction Ref / Order ID</span>
+                            <span class="param-code">tr</span>
+                        </label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="tr" placeholder="e.g., ORD-94820" oninput="generateUPI()" style="flex: 1;">
+                            <button type="button" class="btn btn-secondary" onclick="generateRandomRef()" style="padding: 0.5rem 0.85rem; font-size: 0.85rem;">🎲 Auto</button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Right Column: QR Code Preview & Actions -->
+            <div class="card preview-card">
+                <div class="card-header" style="width: 100%;">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Generated QR & Link
+                    </h2>
+                </div>
+
+                <div class="qr-wrapper" id="qrWrapper">
+                    <div class="qr-placeholder" id="qrPlaceholder">Enter a valid UPI ID to generate QR code</div>
+                    <div id="qrcode"></div>
+                </div>
+
+                <div class="url-box" id="urlDisplay">upi://pay?pa=...</div>
+
+                <div class="actions-grid">
+                    <a id="payBtn" href="#" class="btn btn-primary btn-full">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        Pay via UPI App
+                    </a>
+
+                    <button type="button" class="btn btn-secondary" onclick="copyLink()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Copy Link
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" onclick="shareLink()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                        Share Link
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" onclick="downloadQR()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Save QR PNG
+                    </button>
+
+                    <button type="button" class="btn btn-secondary" onclick="shareQRImage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <polyline points="16 6 12 2 8 6"/>
+                            <line x1="12" y1="2" x2="12" y2="15"/>
+                        </svg>
+                        Share QR Image
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Camera Scanner Modal Overlay -->
+    <div class="modal-overlay" id="scannerModal">
+        <div class="scanner-card">
+            <div class="scanner-header">
+                <h3 style="font-size: 1.1rem; font-weight: 600;">Scan QR Code</h3>
+                <button type="button" class="close-btn" onclick="closeCameraScanner()">&times;</button>
+            </div>
+            
+            <div class="scanner-viewport">
+                <video id="scanVideo" playsinline autoplay></video>
+                <div class="scan-region-box">
+                    <div class="scan-line"></div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 1rem; text-align: center;">
+                Point your camera at a UPI QR code to import its details automatically.
+            </p>
+
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('qrFileInput').click(); closeCameraScanner();" style="margin-top: 1rem; width: 100%;">
+                📁 Choose Photo Instead
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <!-- Hidden canvas for scanning frame analysis -->
+    <canvas id="scanCanvas" style="display: none;"></canvas>
+
+    <script>
+        let qrcodeObj = null;
+        let currentUpiUrl = '';
+        let scanStream = null;
+        let scanAnimationId = null;
+
+        function setAmount(val) {
+            document.getElementById('am').value = val;
+            generateUPI();
+        }
+
+        function generateRandomRef() {
+            const randStr = 'ORD' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('tr').value = randStr;
+            generateUPI();
+        }
+
+        function buildUpiUrl() {
+            const pa = document.getElementById('pa').value.trim();
+            if (!pa) return '';
+
+            const pn = document.getElementById('pn').value.trim();
+            const am = document.getElementById('am').value.trim();
+            const cu = document.getElementById('cu').value.trim() || 'INR';
+            const tn = document.getElementById('tn').value.trim();
+            const tr = document.getElementById('tr').value.trim();
+
+            let url = `upi://pay?pa=${encodeURIComponent(pa)}`;
+            if (pn) url += `&pn=${encodeURIComponent(pn)}`;
+            if (am) url += `&am=${encodeURIComponent(parseFloat(am).toFixed(2))}`;
+            if (cu) url += `&cu=${encodeURIComponent(cu)}`;
+            if (tn) url += `&tn=${encodeURIComponent(tn)}`;
+            if (tr) url += `&tr=${encodeURIComponent(tr)}`;
+
+            return url;
+        }
+
+        function generateUPI() {
+            const url = buildUpiUrl();
+            currentUpiUrl = url;
+
+            const urlDisplay = document.getElementById('urlDisplay');
+            const qrPlaceholder = document.getElementById('qrPlaceholder');
+            const qrcodeDiv = document.getElementById('qrcode');
+            const payBtn = document.getElementById('payBtn');
+
+            if (!url) {
+                urlDisplay.innerText = 'upi://pay?pa=...';
+                qrPlaceholder.style.display = 'block';
+                qrcodeDiv.innerHTML = '';
+                payBtn.href = '#';
+                qrcodeObj = null;
+                return;
+            }
+
+            urlDisplay.innerText = url;
+            payBtn.href = url;
+            qrPlaceholder.style.display = 'none';
+            qrcodeDiv.innerHTML = '';
+
+            // Generate QR Code
+            try {
+                if (typeof QRCode !== 'undefined') {
+                    qrcodeObj = new QRCode(qrcodeDiv, {
+                        text: url,
+                        width: 220,
+                        height: 220,
+                        colorDark: "#0f172a",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                }
+            } catch (err) {
+                console.error("QR Generation error:", err);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2800);
+        }
+
+        /* ================= QR SCANNING & PARSING ================= */
+
+        function parseAndPopulateUpi(rawText) {
+            if (!rawText) return false;
+            let text = rawText.trim();
+            let params = null;
+
+            if (text.includes('?')) {
+                const queryString = text.substring(text.indexOf('?') + 1);
+                params = new URLSearchParams(queryString);
+            } else if (text.includes('&') || text.includes('=')) {
+                params = new URLSearchParams(text);
+            } else if (text.includes('@')) {
+                // Raw VPA address
+                document.getElementById('pa').value = text;
+                generateUPI();
+                showToast('Extracted UPI ID!');
+                return true;
+            }
+
+            if (params) {
+                const pa = params.get('pa') || params.get('PA') || '';
+                const pn = params.get('pn') || params.get('PN') || '';
+                const am = params.get('am') || params.get('AM') || '';
+                const cu = params.get('cu') || params.get('CU') || 'INR';
+                const tn = params.get('tn') || params.get('TN') || '';
+                const tr = params.get('tr') || params.get('TR') || '';
+
+                if (pa) document.getElementById('pa').value = decodeURIComponent(pa);
+                if (pn) document.getElementById('pn').value = decodeURIComponent(pn);
+                if (am) document.getElementById('am').value = am;
+                if (cu) document.getElementById('cu').value = cu;
+                if (tn) document.getElementById('tn').value = decodeURIComponent(tn);
+                if (tr) document.getElementById('tr').value = decodeURIComponent(tr);
+
+                generateUPI();
+                showToast('✨ QR Scanned! Parameters loaded.');
+                return true;
+            }
+
+            showToast('QR Scanned, but no UPI parameters found.');
+            return false;
+        }
+
+        async function openCameraScanner() {
+            const modal = document.getElementById('scannerModal');
+            const video = document.getElementById('scanVideo');
+
+            modal.classList.add('active');
+
+            try {
+                scanStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                video.srcObject = scanStream;
+                video.setAttribute('playsinline', true);
+                video.play();
+                requestAnimationFrame(tickScanner);
+            } catch (err) {
+                console.error("Camera access failed:", err);
+                closeCameraScanner();
+                showToast('Camera access denied or unavailable. Try uploading an image file instead.');
+            }
+        }
+
+        function closeCameraScanner() {
+            const modal = document.getElementById('scannerModal');
+            modal.classList.remove('active');
+
+            if (scanStream) {
+                scanStream.getTracks().forEach(track => track.stop());
+                scanStream = null;
+            }
+            if (scanAnimationId) {
+                cancelAnimationFrame(scanAnimationId);
+                scanAnimationId = null;
+            }
+        }
+
+        function tickScanner() {
+            const video = document.getElementById('scanVideo');
+            const canvas = document.getElementById('scanCanvas');
+            const ctx = canvas.getContext('2d');
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                if (typeof jsQR !== 'undefined') {
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code && code.data) {
+                        closeCameraScanner();
+                        parseAndPopulateUpi(code.data);
+                        return;
+                    }
+                }
+            }
+            scanAnimationId = requestAnimationFrame(tickScanner);
+        }
+
+        function handleQRFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('scanCanvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    if (typeof jsQR !== 'undefined') {
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code && code.data) {
+                            parseAndPopulateUpi(code.data);
+                        } else {
+                            showToast('Could not detect a valid QR Code in this image.');
+                        }
+                    } else {
+                        showToast('QR decoder library not loaded.');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // Reset input
+        }
+
+        /* ================= SHARING & DOWNLOADS ================= */
+
+        function copyLink() {
+            if (!currentUpiUrl) {
+                showToast('Please enter a Payee UPI ID first.');
+                return;
+            }
+            navigator.clipboard.writeText(currentUpiUrl).then(() => {
+                showToast('UPI Payment Link copied!');
+            }).catch(() => {
+                showToast('Failed to copy. Copy manually from the box.');
+            });
+        }
+
+        function shareLink() {
+            if (!currentUpiUrl) {
+                showToast('Please enter a Payee UPI ID first.');
+                return;
+            }
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'UPI Payment Link',
+                    text: `Pay via UPI to ${document.getElementById('pn').value || document.getElementById('pa').value}`,
+                    url: currentUpiUrl
+                }).catch(console.error);
+            } else {
+                copyLink();
+            }
+        }
+
+        function getQRCanvas() {
+            const container = document.getElementById('qrcode');
+            const canvas = container.querySelector('canvas');
+            if (canvas) return canvas;
+
+            const img = container.querySelector('img');
+            if (img && img.src) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = img.naturalWidth || 220;
+                tempCanvas.height = img.naturalHeight || 220;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                return tempCanvas;
+            }
+            return null;
+        }
+
+        function downloadQR() {
+            if (!currentUpiUrl) {
+                showToast('Please enter a Payee UPI ID first.');
+                return;
+            }
+            const canvas = getQRCanvas();
+            if (!canvas) {
+                showToast('QR Code not ready yet.');
+                return;
+            }
+
+            const imageURI = canvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = `upi-qr-${document.getElementById('pa').value.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            link.href = imageURI;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('QR Code downloaded!');
+        }
+
+        async function shareQRImage() {
+            if (!currentUpiUrl) {
+                showToast('Please enter a Payee UPI ID first.');
+                return;
+            }
+            const canvas = getQRCanvas();
+            if (!canvas) {
+                showToast('QR Code not ready.');
+                return;
+            }
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+                const file = new File([blob], 'upi-qr.png', { type: 'image/png' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'UPI Payment QR Code',
+                            text: 'Scan to pay via UPI'
+                        });
+                    } catch (err) {
+                        console.log('Share canceled or failed', err);
+                    }
+                } else {
+                    downloadQR();
+                }
+            }, 'image/png');
+        }
+
+        // Initialize with default example
+        document.getElementById('pa').value = 'example@upi';
+        generateUPI();
+    </script>
+</body>
+</html>
